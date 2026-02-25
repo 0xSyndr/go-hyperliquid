@@ -644,3 +644,108 @@ func FloatToUsdInt(value float64) int {
 func GetTimestampMs() int64 {
 	return time.Now().UnixMilli()
 }
+
+func GetApproveAgentHash(agentAddress, agentName string, nonce int64, isMainnet bool) ([]byte, error) {
+	if nonce < 0 {
+		return nil, fmt.Errorf("nonce cannot be negative: %d", nonce)
+	}
+
+	// Use int64 in the action map - apitypes will handle the conversion to uint64
+	// based on the type declaration in payloadTypes
+	action := map[string]any{
+		"type":         "approveAgent",
+		"agentAddress": agentAddress,
+		"agentName":    agentName,
+		"nonce":        nonce,
+	}
+
+	// payload_types from Python: only declares fields that are in the original action
+	// signatureChainId and hyperliquidChain are added by SignUserSignedAction
+	// but they're NOT declared in payloadTypes (they're added to message dynamically)
+	payloadTypes := []apitypes.Type{
+		{Name: "hyperliquidChain", Type: "string"},
+		{Name: "agentAddress", Type: "address"},
+		{Name: "agentName", Type: "string"},
+		{Name: "nonce", Type: "uint64"},
+	}
+	return HashUserSignedAction(action, payloadTypes, "HyperliquidTransaction:ApproveAgent", isMainnet)
+}
+
+func HashUserSignedAction(action map[string]any, payloadTypes []apitypes.Type, primaryType string, isMainnet bool) ([]byte, error) {
+	// Add signatureChainId based on environment
+	// signatureChainId is the chain used by the wallet to sign.
+	// hyperliquidChain determines the environment and prevents replay attacks.
+	action["signatureChainId"] = "0x66eee"
+	action["hyperliquidChain"] = "Mainnet"
+	if !isMainnet {
+		action["hyperliquidChain"] = "Testnet"
+	}
+
+	// Create typed data
+	// Note: chainId is hardcoded to 421614 just like the Python SDK
+	chainId := math.HexOrDecimal256(*big.NewInt(421614))
+	typedData := apitypes.TypedData{
+		Domain: apitypes.TypedDataDomain{
+			ChainId:           &chainId,
+			Name:              "HyperliquidSignTransaction",
+			Version:           "1",
+			VerifyingContract: "0x0000000000000000000000000000000000000000",
+		},
+		Types: apitypes.Types{
+			primaryType: payloadTypes,
+			"EIP712Domain": []apitypes.Type{
+				{Name: "name", Type: "string"},
+				{Name: "version", Type: "string"},
+				{Name: "chainId", Type: "uint256"},
+				{Name: "verifyingContract", Type: "address"},
+			},
+		},
+		PrimaryType: primaryType,
+		Message:     action,
+	}
+	// Create EIP-712 hash
+	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash domain: %w", err)
+	}
+
+	// Use lenient hashing to allow extra fields in message (Python compatibility)
+	typedDataHash, err := hashStructLenient(typedData, typedData.PrimaryType, typedData.Message)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash typed data: %w", err)
+	}
+
+	rawData := []byte{0x19, 0x01}
+	rawData = append(rawData, domainSeparator...)
+	rawData = append(rawData, typedDataHash...)
+	msgHash := crypto.Keccak256Hash(rawData)
+	return msgHash.Bytes(), nil
+}
+
+func CreateSignatureResultFromHex(signature string) (SignatureResult, error) {
+	sigBytes, err := hex.DecodeString(signature)
+	if err != nil {
+		return SignatureResult{}, fmt.Errorf("failed to decode signature: %w", err)
+	}
+	r := new(big.Int).SetBytes(sigBytes[:32])
+	s := new(big.Int).SetBytes(sigBytes[32:64])
+	v := int(signature[64]) + 27
+
+	// DEBUG: Verify signature recovery
+	// pubKey, err := crypto.SigToPub(msgHash.Bytes(), signature)
+	// if err == nil {
+	// 	recoveredAddr := crypto.PubkeyToAddress(*pubKey)
+	// 	expectedAddr := crypto.PubkeyToAddress(privateKey.PublicKey)
+	// 	fmt.Printf("   DEBUG SIGNATURE:\n")
+	// 	fmt.Printf("   Expected address: %s\n", expectedAddr.Hex())
+	// 	fmt.Printf("   Recovered address: %s\n", recoveredAddr.Hex())
+	// 	fmt.Printf("   Match: %v\n", recoveredAddr.Hex() == expectedAddr.Hex())
+	// 	fmt.Printf("   msgHash: %s\n", msgHash.Hex())
+	//}
+
+	return SignatureResult{
+		R: hexutil.EncodeBig(r),
+		S: hexutil.EncodeBig(s),
+		V: v,
+	}, nil
+}

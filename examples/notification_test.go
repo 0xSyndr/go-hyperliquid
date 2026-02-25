@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sonirico/go-hyperliquid"
+	"github.com/syndr/go-hyperliquid"
 )
 
 func TestNotificationWebSocket(t *testing.T) {
