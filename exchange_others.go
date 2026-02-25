@@ -1797,3 +1797,43 @@ func (e *Exchange) MultiSig(
 	}
 	return &result, nil
 }
+
+func (e *Exchange) ApproveAgentWithSignature(
+	ctx context.Context,
+	agentAddress string,
+	agentName string,
+	signature string,
+	nonce int64,
+) (*AgentApprovalResponse, error) {
+	// Build action for submission
+	// Note: We send the pointer version for omitempty behavior in JSON/msgpack
+	hyperliquidChain := "Testnet"
+	if e.client.baseURL == MainnetAPIURL {
+		hyperliquidChain = "Mainnet"
+	}
+
+	action := ApproveAgentAction{
+		Type:             "approveAgent",
+		SignatureChainId: "0x66eee",
+		HyperliquidChain: hyperliquidChain,
+		AgentAddress:     agentAddress,
+		AgentName:        &agentName,
+		Nonce:            nonce,
+	}
+
+	sig, err := CreateSignatureResultFromHex(signature)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := e.postAction(ctx, action, sig, nonce)
+	if err != nil {
+		return nil, err
+	}
+
+	var result AgentApprovalResponse
+	if err := json.Unmarshal(resp, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
