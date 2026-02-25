@@ -594,6 +594,12 @@ type AgentApprovalResponse struct {
 	Error  string `json:"error,omitempty"`
 }
 
+type SetAccountAbstractionResponse struct {
+	Status string `json:"status"`
+	TxHash string `json:"txHash,omitempty"`
+	Error  string `json:"error,omitempty"`
+}
+
 type MultiSigConversionResponse struct {
 	Status string `json:"status"`
 	TxHash string `json:"txHash,omitempty"`

@@ -885,6 +885,51 @@ func (e *Exchange) ApproveAgent(
 	return &result, agentKey, nil
 }
 
+func (e *Exchange) SetAccountAbstraction(
+	ctx context.Context,
+	user string,
+	abstraction string,
+) (*SetAccountAbstractionResponse, error) {
+	nonce := e.nextNonce()
+
+	sig, err := SignUpdateAccountAbstraction(
+		e.privateKey,
+		user,
+		abstraction,
+		nonce,
+		e.client.baseURL == MainnetAPIURL,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build action for submission
+	// Note: We send the pointer version for omitempty behavior in JSON/msgpack
+	hyperliquidChain := "Testnet"
+	if e.client.baseURL == MainnetAPIURL {
+		hyperliquidChain = "Mainnet"
+	}
+
+	action := UpdateAccountAbstractionAction{
+		Type:             "userSetAbstraction",
+		SignatureChainId: "0x66eee",
+		HyperliquidChain: hyperliquidChain,
+		User:             user,
+		Abstraction:      abstraction,
+		Nonce:            nonce,
+	}
+
+	resp, err := e.postAction(ctx, action, sig, nonce)
+	if err != nil {
+		return nil, err
+	}
+	var result SetAccountAbstractionResponse
+	if err := json.Unmarshal(resp, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
+}
+
 // ApproveBuilderFee approves builder fee payment
 func (e *Exchange) ApproveBuilderFee(
 	ctx context.Context,
@@ -1836,4 +1881,37 @@ func (e *Exchange) ApproveAgentWithSignature(
 		return nil, err
 	}
 	return &result, nil
+}
+
+func (e *Exchange) UpdateAccountAbstractionWithSignature(
+	ctx context.Context,
+	user string,
+	abstraction string,
+	signature string,
+	nonce int64,
+) ([]byte, error) {
+	hyperliquidChain := "Testnet"
+	if e.client.baseURL == MainnetAPIURL {
+		hyperliquidChain = "Mainnet"
+	}
+	action := UpdateAccountAbstractionAction{
+		Type:             "userSetAbstraction",
+		SignatureChainId: "0x66eee",
+		HyperliquidChain: hyperliquidChain,
+		User:             user,
+		Abstraction:      abstraction,
+		Nonce:            nonce,
+	}
+
+	sig, err := CreateSignatureResultFromHex(signature)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := e.postAction(ctx, action, sig, nonce)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
 }

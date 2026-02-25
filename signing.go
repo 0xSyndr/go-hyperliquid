@@ -560,6 +560,35 @@ func SignAgent(
 	)
 }
 
+func SignUpdateAccountAbstraction(
+	privateKey *ecdsa.PrivateKey,
+	user string,
+	abstraction string,
+	nonce int64,
+	isMainnet bool,
+) (SignatureResult, error) {
+	// The nonce must be non-negative
+	if nonce < 0 {
+		return SignatureResult{}, fmt.Errorf("nonce cannot be negative: %d", nonce)
+	}
+
+	action := map[string]any{
+		"type":        "userSetAbstraction",
+		"user":        user,
+		"abstraction": abstraction,
+		"nonce":       nonce,
+	}
+
+	payloadTypes := []apitypes.Type{
+		{Name: "hyperliquidChain", Type: "string"},
+		{Name: "user", Type: "address"},
+		{Name: "abstraction", Type: "string"},
+		{Name: "nonce", Type: "uint64"},
+	}
+
+	return SignUserSignedAction(privateKey, action, payloadTypes, "HyperliquidTransaction:UserSetAbstraction", isMainnet)
+}
+
 type signApproveBuilderFee struct {
 	Type string `msgpack:"type"`
 	// BuilderAddress is the address of the builder
@@ -669,6 +698,27 @@ func GetApproveAgentHash(agentAddress, agentName string, nonce int64, isMainnet 
 		{Name: "nonce", Type: "uint64"},
 	}
 	return HashUserSignedAction(action, payloadTypes, "HyperliquidTransaction:ApproveAgent", isMainnet)
+}
+
+func GetUpdateAccountAbstractionHash(user, abstraction string, nonce int64, isMainnet bool) ([]byte, error) {
+	if nonce < 0 {
+		return nil, fmt.Errorf("nonce cannot be negative: %d", nonce)
+	}
+
+	action := map[string]any{
+		"type":        "userSetAbstraction",
+		"user":        user,
+		"abstraction": abstraction,
+		"nonce":       nonce,
+	}
+
+	payloadTypes := []apitypes.Type{
+		{Name: "hyperliquidChain", Type: "string"},
+		{Name: "user", Type: "address"},
+		{Name: "abstraction", Type: "string"},
+		{Name: "nonce", Type: "uint64"},
+	}
+	return HashUserSignedAction(action, payloadTypes, "HyperliquidTransaction:UserSetAbstraction", isMainnet)
 }
 
 func HashUserSignedAction(action map[string]any, payloadTypes []apitypes.Type, primaryType string, isMainnet bool) ([]byte, error) {

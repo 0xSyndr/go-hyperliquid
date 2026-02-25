@@ -248,6 +248,17 @@ type ApproveAgentAction struct {
 	Nonce            int64   `json:"nonce"               msgpack:"nonce"`
 }
 
+//Update abstraction action
+
+type UpdateAccountAbstractionAction struct {
+	Type             string `json:"type"                msgpack:"type"`
+	SignatureChainId string `json:"signatureChainId"    msgpack:"signatureChainId"`
+	HyperliquidChain string `json:"hyperliquidChain"    msgpack:"hyperliquidChain"`
+	User             string `json:"user"                msgpack:"user"`
+	Abstraction      string `json:"abstraction"         msgpack:"abstraction"`
+	Nonce            int64  `json:"nonce"               msgpack:"nonce"`
+}
+
 // ApproveBuilderFeeAction represents approve builder fee action
 type ApproveBuilderFeeAction struct {
 	Type       string `json:"type"       msgpack:"type"`
