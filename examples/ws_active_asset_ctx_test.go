@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/syndr/go-hyperliquid"
+	"github.com/0xsyndr/go-hyperliquid"
 )
 
 func TestActiveAssetCtx(t *testing.T) {

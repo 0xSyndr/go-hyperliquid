@@ -5,8 +5,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/0xsyndr/go-hyperliquid"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/syndr/go-hyperliquid"
 )
 
 func newTestInfo(t *testing.T) *hyperliquid.Info {

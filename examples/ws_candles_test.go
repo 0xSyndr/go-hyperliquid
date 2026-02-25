@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	hl "github.com/syndr/go-hyperliquid"
+	hl "github.com/0xsyndr/go-hyperliquid"
 )
 
 func TestCandleWebSocket(t *testing.T) {

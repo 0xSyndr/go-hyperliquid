@@ -1,4 +1,4 @@
-module github.com/syndr/go-hyperliquid
+module github.com/0xsyndr/go-hyperliquid
 
 go 1.25.3
 

@@ -1,8 +1,8 @@
 # go-hyperliquid
 
-[![Go Reference](https://pkg.go.dev/badge/github.com/syndr/go-hyperliquid.svg)](https://pkg.go.dev/github.com/syndr/go-hyperliquid)
-[![Go Report Card](https://goreportcard.com/badge/github.com/syndr/go-hyperliquid)](https://goreportcard.com/report/github.com/syndr/go-hyperliquid)
-[![CI](https://github.com/syndr/go-hyperliquid/actions/workflows/ci.yml/badge.svg)](https://github.com/syndr/go-hyperliquid/actions/workflows/ci.yml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/0xsyndr/go-hyperliquid.svg)](https://pkg.go.dev/github.com/0xsyndr/go-hyperliquid)
+[![Go Report Card](https://goreportcard.com/badge/github.com/0xsyndr/go-hyperliquid)](https://goreportcard.com/report/github.com/0xsyndr/go-hyperliquid)
+[![CI](https://github.com/0xsyndr/go-hyperliquid/actions/workflows/ci.yml/badge.svg)](https://github.com/0xsyndr/go-hyperliquid/actions/workflows/ci.yml)
 [![Coverage Status](https://coveralls.io/repos/github/sonirico/go-hyperliquid/badge.svg?branch=main)](https://coveralls.io/github/sonirico/go-hyperliquid?branch=main)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Go Version](https://img.shields.io/github/go-mod/go-version/sonirico/go-hyperliquid)](https://go.dev/)
@@ -12,7 +12,7 @@ Unofficial Go client for the Hyperliquid exchange API. This implementation follo
 ## Installation
 
 ```bash
-go get github.com/syndr/go-hyperliquid
+go get github.com/0xsyndr/go-hyperliquid
 ```
 
 ## Features
@@ -77,7 +77,7 @@ import (
     "log"
 
     "github.com/ethereum/go-ethereum/crypto"
-    hyperliquid "github.com/syndr/go-hyperliquid"
+    hyperliquid "github.com/0xsyndr/go-hyperliquid"
 )
 
 func main() {
@@ -134,7 +134,7 @@ func main() {
 For detailed API documentation, please refer to:
 
 - [Official Hyperliquid API docs](https://hyperliquid.xyz/docs)
-- [Go package documentation](https://pkg.go.dev/github.com/syndr/go-hyperliquid)
+- [Go package documentation](https://pkg.go.dev/github.com/0xsyndr/go-hyperliquid)
 
 ### Examples
 
@@ -296,7 +296,7 @@ Thanks to all the people who have contributed to this project! 🎉
 
 ```bash
 # Clone the repository
-git clone https://github.com/syndr/go-hyperliquid.git
+git clone https://github.com/0xsyndr/go-hyperliquid.git
 cd go-hyperliquid
 
 # Install dependencies and tools
