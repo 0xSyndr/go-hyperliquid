@@ -259,6 +259,23 @@ type UpdateAccountAbstractionAction struct {
 	Nonce            int64  `json:"nonce"               msgpack:"nonce"`
 }
 
+//Send to EVM with data
+
+type SendToEVMWithDataAction struct {
+	Type                 string `json:"type"                msgpack:"type"`
+	HyperliquidChain     string `json:"hyperliquidChain"    msgpack:"hyperliquidChain"`
+	SignatureChainId     string `json:"signatureChainId"    msgpack:"signatureChainId"`
+	Token                string `json:"token"               msgpack:"token"`
+	Amount               string `json:"amount"              msgpack:"amount"`
+	SourceDex            string `json:"sourceDex"           msgpack:"sourceDex"`
+	DestinationRecipient string `json:"destinationRecipient" msgpack:"destinationRecipient"`
+	AddressEncoding      string `json:"addressEncoding"      msgpack:"addressEncoding"`
+	DestinationChainId   int64  `json:"destinationChainId"   msgpack:"destinationChainId"`
+	GasLimit             int64  `json:"gasLimit"             msgpack:"gasLimit"`
+	Data                 string `json:"data"                 msgpack:"data"`
+	Nonce                int64  `json:"nonce"               msgpack:"nonce"`
+}
+
 // ApproveBuilderFeeAction represents approve builder fee action
 type ApproveBuilderFeeAction struct {
 	Type       string `json:"type"       msgpack:"type"`
