@@ -348,6 +348,21 @@ func SignUserSignedAction(
 	return signInner(privateKey, typedData)
 }
 
+func parseSignatureChainID(signatureChainID string) (math.HexOrDecimal256, error) {
+	s := strings.TrimPrefix(strings.TrimSpace(signatureChainID), "0x")
+	s = strings.TrimPrefix(s, "0X")
+	if s == "" {
+		return math.HexOrDecimal256{}, fmt.Errorf("signatureChainId cannot be empty")
+	}
+
+	chainIDBig := new(big.Int)
+	if _, ok := chainIDBig.SetString(s, 16); !ok {
+		return math.HexOrDecimal256{}, fmt.Errorf("invalid signatureChainId %q", signatureChainID)
+	}
+
+	return math.HexOrDecimal256(*chainIDBig), nil
+}
+
 func SignL1Action(
 	privateKey *ecdsa.PrivateKey,
 	action any,
@@ -589,6 +604,42 @@ func SignUpdateAccountAbstraction(
 	return SignUserSignedAction(privateKey, action, payloadTypes, "HyperliquidTransaction:UserSetAbstraction", isMainnet)
 }
 
+func SignSendToEVMWithData(
+	privateKey *ecdsa.PrivateKey,
+	signatureChainID string,
+	token string,
+	amount string,
+	sourceDex string,
+	destinationRecipient string,
+	addressEncoding string,
+	destinationChainID uint32,
+	gasLimit uint64,
+	data string,
+	nonce int64,
+	isMainnet bool,
+) (SignatureResult, error) {
+	if nonce < 0 {
+		return SignatureResult{}, fmt.Errorf("nonce cannot be negative: %d", nonce)
+	}
+	typedData, err := buildSendToEVMWithDataTypedData(
+		signatureChainID,
+		token,
+		amount,
+		sourceDex,
+		destinationRecipient,
+		addressEncoding,
+		destinationChainID,
+		gasLimit,
+		data,
+		nonce,
+		isMainnet,
+	)
+	if err != nil {
+		return SignatureResult{}, err
+	}
+	return signInnerStrict(privateKey, typedData)
+}
+
 type signApproveBuilderFee struct {
 	Type string `msgpack:"type"`
 	// BuilderAddress is the address of the builder
@@ -770,6 +821,156 @@ func HashUserSignedAction(action map[string]any, payloadTypes []apitypes.Type, p
 	rawData = append(rawData, typedDataHash...)
 	msgHash := crypto.Keccak256Hash(rawData)
 	return msgHash.Bytes(), nil
+}
+
+func GetSendToEVMWithDataHash(
+	signatureChainID string,
+	token string,
+	amount string,
+	sourceDex string,
+	destinationRecipient string,
+	addressEncoding string,
+	destinationChainID uint32,
+	gasLimit uint64,
+	data string,
+	nonce int64,
+	isMainnet bool,
+) ([]byte, error) {
+	if nonce < 0 {
+		return nil, fmt.Errorf("nonce cannot be negative: %d", nonce)
+	}
+	typedData, err := buildSendToEVMWithDataTypedData(
+		signatureChainID,
+		token,
+		amount,
+		sourceDex,
+		destinationRecipient,
+		addressEncoding,
+		destinationChainID,
+		gasLimit,
+		data,
+		nonce,
+		isMainnet,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return hashTypedDataStrict(typedData)
+}
+
+func buildSendToEVMWithDataTypedData(
+	signatureChainID string,
+	token string,
+	amount string,
+	sourceDex string,
+	destinationRecipient string,
+	addressEncoding string,
+	destinationChainID uint32,
+	gasLimit uint64,
+	data string,
+	nonce int64,
+	isMainnet bool,
+) (apitypes.TypedData, error) {
+	chainID, err := parseSignatureChainID(signatureChainID)
+	if err != nil {
+		return apitypes.TypedData{}, err
+	}
+
+	dataBytes, err := hexutil.Decode(data)
+	if err != nil {
+		return apitypes.TypedData{}, fmt.Errorf("invalid data hex %q: %w", data, err)
+	}
+
+	hyperliquidChain := "Mainnet"
+	if !isMainnet {
+		hyperliquidChain = "Testnet"
+	}
+
+	payloadTypes := []apitypes.Type{
+		{Name: "hyperliquidChain", Type: "string"},
+		{Name: "token", Type: "string"},
+		{Name: "amount", Type: "string"},
+		{Name: "sourceDex", Type: "string"},
+		{Name: "destinationRecipient", Type: "string"},
+		{Name: "addressEncoding", Type: "string"},
+		{Name: "destinationChainId", Type: "uint32"},
+		{Name: "gasLimit", Type: "uint64"},
+		{Name: "data", Type: "bytes"},
+		{Name: "nonce", Type: "uint64"},
+	}
+
+	message := map[string]any{
+		"hyperliquidChain":     hyperliquidChain,
+		"token":                token,
+		"amount":               amount,
+		"sourceDex":            sourceDex,
+		"destinationRecipient": destinationRecipient,
+		"addressEncoding":      addressEncoding,
+		"destinationChainId":   new(big.Int).SetUint64(uint64(destinationChainID)),
+		"gasLimit":             new(big.Int).SetUint64(gasLimit),
+		"data":                 dataBytes,
+		"nonce":                new(big.Int).SetUint64(uint64(nonce)),
+	}
+
+	return apitypes.TypedData{
+		Domain: apitypes.TypedDataDomain{
+			ChainId:           &chainID,
+			Name:              "HyperliquidSignTransaction",
+			Version:           "1",
+			VerifyingContract: "0x0000000000000000000000000000000000000000",
+		},
+		Types: apitypes.Types{
+			"HyperliquidTransaction:SendToEvmWithData": payloadTypes,
+			"EIP712Domain": []apitypes.Type{
+				{Name: "name", Type: "string"},
+				{Name: "version", Type: "string"},
+				{Name: "chainId", Type: "uint256"},
+				{Name: "verifyingContract", Type: "address"},
+			},
+		},
+		PrimaryType: "HyperliquidTransaction:SendToEvmWithData",
+		Message:     message,
+	}, nil
+}
+
+func hashTypedDataStrict(typedData apitypes.TypedData) ([]byte, error) {
+	domainSeparator, err := typedData.HashStruct("EIP712Domain", typedData.Domain.Map())
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash domain: %w", err)
+	}
+
+	typedDataHash, err := typedData.HashStruct(typedData.PrimaryType, typedData.Message)
+	if err != nil {
+		return nil, fmt.Errorf("failed to hash typed data: %w", err)
+	}
+
+	rawData := []byte{0x19, 0x01}
+	rawData = append(rawData, domainSeparator...)
+	rawData = append(rawData, typedDataHash...)
+	msgHash := crypto.Keccak256Hash(rawData)
+	return msgHash.Bytes(), nil
+}
+
+func signInnerStrict(privateKey *ecdsa.PrivateKey, typedData apitypes.TypedData) (SignatureResult, error) {
+	msgHash, err := hashTypedDataStrict(typedData)
+	if err != nil {
+		return SignatureResult{}, err
+	}
+
+	signature, err := crypto.Sign(msgHash, privateKey)
+	if err != nil {
+		return SignatureResult{}, fmt.Errorf("failed to sign message: %w", err)
+	}
+
+	r := new(big.Int).SetBytes(signature[:32])
+	s := new(big.Int).SetBytes(signature[32:64])
+	v := int(signature[64]) + 27
+
+	return SignatureResult{
+		R: hexutil.EncodeBig(r),
+		S: hexutil.EncodeBig(s),
+		V: v,
+	}, nil
 }
 
 func CreateSignatureResultFromHex(signature string) (SignatureResult, error) {

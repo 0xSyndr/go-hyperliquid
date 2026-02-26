@@ -930,6 +930,78 @@ func (e *Exchange) SetAccountAbstraction(
 	return &result, nil
 }
 
+func (e *Exchange) SendToEVMWithData(
+	ctx context.Context,
+	signatureChainID string,
+	token string,
+	amount string,
+	sourceDex string,
+	destinationRecipient string,
+	addressEncoding string,
+	destinationChainID int64,
+	gasLimit int64,
+	data string,
+) (*TransferResponse, error) {
+	if destinationChainID < 0 || destinationChainID > int64(^uint32(0)) {
+		return nil, fmt.Errorf("destinationChainID must be in range [0, %d]", ^uint32(0))
+	}
+	if gasLimit < 0 {
+		return nil, fmt.Errorf("gasLimit cannot be negative: %d", gasLimit)
+	}
+
+	nonce := e.nextNonce()
+
+	hyperliquidChain := "Testnet"
+	if e.client.baseURL == MainnetAPIURL {
+		hyperliquidChain = "Mainnet"
+	}
+
+	action := SendToEVMWithDataAction{
+		Type:                 "sendToEvmWithData",
+		HyperliquidChain:     hyperliquidChain,
+		SignatureChainId:     signatureChainID,
+		Token:                token,
+		Amount:               amount,
+		SourceDex:            sourceDex,
+		DestinationRecipient: destinationRecipient,
+		AddressEncoding:      addressEncoding,
+		DestinationChainId:   destinationChainID,
+		GasLimit:             gasLimit,
+		Data:                 data,
+		Nonce:                nonce,
+	}
+
+	sig, err := SignSendToEVMWithData(
+		e.privateKey,
+		signatureChainID,
+		token,
+		amount,
+		sourceDex,
+		destinationRecipient,
+		addressEncoding,
+		uint32(destinationChainID),
+		uint64(gasLimit),
+		data,
+		nonce,
+		e.client.baseURL == MainnetAPIURL,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := e.postAction(ctx, action, sig, nonce)
+	if err != nil {
+		return nil, err
+	}
+
+	var result TransferResponse
+	if err := json.Unmarshal(resp, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 // ApproveBuilderFee approves builder fee payment
 func (e *Exchange) ApproveBuilderFee(
 	ctx context.Context,
@@ -1901,6 +1973,60 @@ func (e *Exchange) UpdateAccountAbstractionWithSignature(
 		User:             user,
 		Abstraction:      abstraction,
 		Nonce:            nonce,
+	}
+
+	sig, err := CreateSignatureResultFromHex(signature)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := e.postAction(ctx, action, sig, nonce)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+func (e *Exchange) SendToEVMWithDataWithSignature(
+	ctx context.Context,
+	signatureChainID string,
+	token string,
+	amount string,
+	sourceDex string,
+	destinationRecipient string,
+	addressEncoding string,
+	destinationChainID int64,
+	gasLimit int64,
+	data string,
+	signature string,
+	nonce int64,
+) ([]byte, error) {
+	if destinationChainID < 0 || destinationChainID > int64(^uint32(0)) {
+		return nil, fmt.Errorf("destinationChainID must be in range [0, %d]", ^uint32(0))
+	}
+	if gasLimit < 0 {
+		return nil, fmt.Errorf("gasLimit cannot be negative: %d", gasLimit)
+	}
+
+	hyperliquidChain := "Testnet"
+	if e.client.baseURL == MainnetAPIURL {
+		hyperliquidChain = "Mainnet"
+	}
+
+	action := SendToEVMWithDataAction{
+		Type:                 "sendToEvmWithData",
+		HyperliquidChain:     hyperliquidChain,
+		SignatureChainId:     signatureChainID,
+		Token:                token,
+		Amount:               amount,
+		SourceDex:            sourceDex,
+		DestinationRecipient: destinationRecipient,
+		AddressEncoding:      addressEncoding,
+		DestinationChainId:   destinationChainID,
+		GasLimit:             gasLimit,
+		Data:                 data,
+		Nonce:                nonce,
 	}
 
 	sig, err := CreateSignatureResultFromHex(signature)
