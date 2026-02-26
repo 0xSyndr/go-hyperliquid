@@ -980,7 +980,7 @@ func CreateSignatureResultFromHex(signature string) (SignatureResult, error) {
 	}
 	r := new(big.Int).SetBytes(sigBytes[:32])
 	s := new(big.Int).SetBytes(sigBytes[32:64])
-	v := int(signature[64]) + 27
+	v := int(sigBytes[64]) + 27
 
 	// DEBUG: Verify signature recovery
 	// pubKey, err := crypto.SigToPub(msgHash.Bytes(), signature)

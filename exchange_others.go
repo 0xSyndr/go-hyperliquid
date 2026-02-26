@@ -1961,7 +1961,7 @@ func (e *Exchange) UpdateAccountAbstractionWithSignature(
 	abstraction string,
 	signature string,
 	nonce int64,
-) ([]byte, error) {
+) (*SetAccountAbstractionResponse, error) {
 	hyperliquidChain := "Testnet"
 	if e.client.baseURL == MainnetAPIURL {
 		hyperliquidChain = "Mainnet"
@@ -1985,7 +1985,11 @@ func (e *Exchange) UpdateAccountAbstractionWithSignature(
 		return nil, err
 	}
 
-	return resp, nil
+	var result SetAccountAbstractionResponse
+	if err := json.Unmarshal(resp, &result); err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 func (e *Exchange) SendToEVMWithDataWithSignature(
